@@ -1,18 +1,18 @@
 #!/bin/bash
 
 equation="$1"
-echo $1
 
 shift 1
 
-while getopts 'y:d:z:' opt; do
-	case $opt in
+while getopts 'y:d:z:s:' opt; do
+	case "$opt" in
 		y ) yeq="${OPTARG%;*}"
 			y="${OPTARG#*;}";;
 
 		d ) detail=$OPTARG;;
 		z ) zeq="${OPTARG%;*}"
 			z="${OPTARG#*;}";;
+		s ) start="$OPTARG";;
 	esac
 done
 
@@ -29,18 +29,16 @@ fact() {
 }
 
 
-declare -a series
-
-series="x"
+series=$start
 
 #1 = +, 0 = -
-sign=0
 
 for i in $(seq $detail); do	
 	part="$equation"
 	part="${part//y/$y}"
-	part="${part//z/$z}"
 
+
+	part="${part//z/$z}"
 
 	for factExp in $(echo "$part" | egrep -o "[0-9]{1,}!"); do
 		factRes=$(fact ${factExp%!})
@@ -48,19 +46,11 @@ for i in $(seq $detail); do
 		part="${part//$factExp/$factRes}"
 	done
 
-	case $sign in
-		'0')
-		series="$series - $part" 
-		sign=1;;
-
-		'1') 
-		series="$series + $part"
-		sign=0;;
-	esac
+	series="$series$part"
 
 	#Execute user defined y equation
-	y=$(echo ${yeq//y/$y} | bc)
-	z=$(echo ${zeq//z/$z} | bc)
+	y="$(echo ${yeq//y/$y} | bc)"
+	z="$(echo "${zeq//z/$z}" | bc)"
 
 done
-	echo $series
+	echo "$series"

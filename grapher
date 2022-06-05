@@ -1,6 +1,5 @@
 #!/bin/bash
-#clear
-
+clear
 while getopts "d:r:" opt; do 
 	case $opt in
 		r ) detail=$OPTARG ;;
@@ -12,7 +11,7 @@ while getopts "d:r:" opt; do
 done
 
 calc() {
-	result=$(echo "$1" | bc | trim)
+	result=$(echo "$1" | bc | sed '/\./ s/\.\{0,1\}0\{1,\}$//')
 	shift 1
 
 	local OPTIND
@@ -41,10 +40,6 @@ fill() {
 	done
 }
 
-trim() {
-	sed '/\./ s/\.\{0,1\}0\{1,\}$//' < /dev/stdin
-}
-
 #result = indices of digits found in array
 
 findI() {
@@ -69,13 +64,15 @@ findI() {
 	echo ${indices[@]}
 }
 
-equation=$(./series '(x ^ y)/y!' -y 'y+2;3' -d 3)
+#equation=$(./series '+ (z *  ((x ^ y)/y!))' -y 'y+2;3' -z 'z * -1;-1' -d 3)
+equation=$(cat < /dev/stdin)
 
 zoom=$(calc "1/$detail")
 domainRange=$(calc "$domainEnd - $domainStart" -a)
 
+declare -i pos_res
+declare -i neg_res
 
-declare -i pos_res neg_res
 pos_res=$(calc "$zoom * $domainEnd" -a)
 neg_res=$(calc "$zoom * $domainStart" -a)
 
@@ -88,9 +85,7 @@ for i in $(seq $res); do
 
 	point=$(calc "${equation//'x'/$x}")
 	point=$(calc "$point * $zoom")
-
 	point=$(printf "%.0f" $point)
-
 	points[i]=$point
 done
 
