@@ -1,0 +1,132 @@
+#!/bin/bash
+#clear
+
+while getopts "d:r:" opt; do 
+	case $opt in
+		r ) detail=$OPTARG ;;
+		d ) 
+			domainStart=${OPTARG%:*}
+			domainEnd=${OPTARG#*:}
+			;;
+	esac
+done
+
+calc() {
+	result=$(echo "$1" | bc | trim)
+	shift 1
+
+	local OPTIND
+	
+	while getopts 'a' opt; do
+		case $opt in
+			a ) absolute=1;;
+		esac
+	done
+
+	
+	
+	if [[ absolute -eq '1' ]]; then
+		result=${result#-}
+	fi
+
+	echo $result
+}
+
+fill() {
+	length=$1
+	char=$2
+
+	for i in $(seq 0 $length); do
+		echo $char 
+	done
+}
+
+trim() {
+	sed '/\./ s/\.\{0,1\}0\{1,\}$//' < /dev/stdin
+}
+
+#result = indices of digits found in array
+
+findI() {
+	declare -a array=(${@:1:$(($# - 1))})	
+	declare -i digit="${@: -1}"
+
+	declare -a indices=()
+	declare -i i=0
+	declare resultIndex=0
+
+	for element in ${array[@]}; do
+		if [[ $element -eq $digit ]]; then
+
+			indices[$resultIndex]="$i"
+
+			((resultIndex++))
+		fi
+
+		((i++))
+	done
+
+	echo ${indices[@]}
+}
+
+equation=$(./series '(x ^ y)/y!' -y 'y+2;3' -d 3)
+
+zoom=$(calc "1/$detail")
+domainRange=$(calc "$domainEnd - $domainStart" -a)
+
+
+declare -i pos_res neg_res
+pos_res=$(calc "$zoom * $domainEnd" -a)
+neg_res=$(calc "$zoom * $domainStart" -a)
+
+declare -i res=$(calc "$zoom * $domainRange")
+
+ratio=$(calc "$res / $domainRange")
+
+for i in $(seq $res); do
+	x=$(calc "($i - $neg_res)/$ratio")
+
+	point=$(calc "${equation//'x'/$x}")
+	point=$(calc "$point * $zoom")
+
+	point=$(printf "%.0f" $point)
+
+	points[i]=$point
+done
+
+
+
+declare -a line
+
+#fill line with '*' and '+' on y axis
+for i in $(seq $res); do
+ 	blank[i]='.'
+ 	blank[$neg_res]='+'
+done
+
+
+#file line with '-'
+declare -a axis
+axis=(`fill $res '+'`) 
+
+for y in $(seq $pos_res -1 -$neg_res); do
+ 	line=("${blank[@]}")
+
+ 	if [[ y -eq 0 ]]; then 
+ 		line=("${axis[@]}")			
+ 	fi
+
+ 	declare -a indices=(`findI "${points[@]}" $y`)
+
+ 	if [[ -n $indices ]]; then
+		for index in ${indices[@]}; do
+ 			line[$index]='#'
+		 done
+ 	fi
+
+  	echo "${line[@]}"
+done
+
+ 
+
+

@@ -1,0 +1,66 @@
+#!/bin/bash
+
+equation="$1"
+echo $1
+
+shift 1
+
+while getopts 'y:d:z:' opt; do
+	case $opt in
+		y ) yeq="${OPTARG%;*}"
+			y="${OPTARG#*;}";;
+
+		d ) detail=$OPTARG;;
+		z ) zeq="${OPTARG%;*}"
+			z="${OPTARG#*;}";;
+	esac
+done
+
+fact() {
+	declare -i number=$1 result=1
+
+	while [ $number -gt 1 ]; do
+		result="$((result * number))"
+		number="$((number - 1))"
+		#echo "for the number: $1 factorial is: $result"
+	done
+
+	echo $result
+}
+
+
+declare -a series
+
+series="x"
+
+#1 = +, 0 = -
+sign=0
+
+for i in $(seq $detail); do	
+	part="$equation"
+	part="${part//y/$y}"
+	part="${part//z/$z}"
+
+
+	for factExp in $(echo "$part" | egrep -o "[0-9]{1,}!"); do
+		factRes=$(fact ${factExp%!})
+
+		part="${part//$factExp/$factRes}"
+	done
+
+	case $sign in
+		'0')
+		series="$series - $part" 
+		sign=1;;
+
+		'1') 
+		series="$series + $part"
+		sign=0;;
+	esac
+
+	#Execute user defined y equation
+	y=$(echo ${yeq//y/$y} | bc)
+	z=$(echo ${zeq//z/$z} | bc)
+
+done
+	echo $series
